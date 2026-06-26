@@ -722,8 +722,8 @@ function getPresetElevatorProfile(policy, elevatorId, config) {
   if (policy === "all") {
     return {
       label: "전체층",
-      floors,
-      primary: floors,
+      floors: withLobbyFloor(floors, config),
+      primary: withLobbyFloor(floors, config),
       center: average(floors),
     };
   }
@@ -733,8 +733,8 @@ function getPresetElevatorProfile(policy, elevatorId, config) {
     if (elevatorId === 1) {
       return {
         label: "전층",
-        floors,
-        primary: floors,
+        floors: withLobbyFloor(floors, config),
+        primary: withLobbyFloor(floors, config),
         center: average(floors),
       };
     }
@@ -743,8 +743,8 @@ function getPresetElevatorProfile(policy, elevatorId, config) {
       const zoneFloors = [1, ...boundedRange(5, 9, config)];
       return {
         label: "1,5-9층",
-        floors: zoneFloors,
-        primary: zoneFloors,
+        floors: withLobbyFloor(zoneFloors, config),
+        primary: withLobbyFloor(zoneFloors, config),
         center: average(zoneFloors),
       };
     }
@@ -753,18 +753,18 @@ function getPresetElevatorProfile(policy, elevatorId, config) {
     const zone = zones[(elevatorId - 1) % zones.length];
     return {
       label: zone.label,
-      floors: zone.floors,
-      primary: zone.floors,
+      floors: withLobbyFloor(zone.floors, config),
+      primary: withLobbyFloor(zone.floors, config),
       center: average(zone.floors),
     };
   }
 
   if (policy === "priority") {
     const profiles = [
-      { label: "홀수 우선", floors: floors.filter((floor) => floor % 2 !== 0), primary: floors.filter((floor) => floor % 2 !== 0) },
-      { label: "짝수 우선", floors: floors.filter((floor) => floor % 2 === 0), primary: floors.filter((floor) => floor % 2 === 0) },
-      { label: "1-7 우선", floors: boundedRange(config.minFloor, 7, config), primary: boundedRange(config.minFloor, 7, config) },
-      { label: `8-${config.totalFloors} 우선`, floors: boundedRange(8, config.totalFloors, config), primary: boundedRange(8, config.totalFloors, config) },
+      { label: "홀수 우선", floors: withLobbyFloor(floors.filter((floor) => floor % 2 !== 0), config), primary: withLobbyFloor(floors.filter((floor) => floor % 2 !== 0), config) },
+      { label: "짝수 우선", floors: withLobbyFloor(floors.filter((floor) => floor % 2 === 0), config), primary: withLobbyFloor(floors.filter((floor) => floor % 2 === 0), config) },
+      { label: "1-7 우선", floors: withLobbyFloor(boundedRange(config.minFloor, 7, config), config), primary: withLobbyFloor(boundedRange(config.minFloor, 7, config), config) },
+      { label: `8-${config.totalFloors} 우선`, floors: withLobbyFloor(boundedRange(8, config.totalFloors, config), config), primary: withLobbyFloor(boundedRange(8, config.totalFloors, config), config) },
     ];
     const profile = profiles[(elevatorId - 1) % profiles.length];
     return { ...profile, center: average(profile.floors) };
@@ -772,7 +772,7 @@ function getPresetElevatorProfile(policy, elevatorId, config) {
 
   const parity = elevatorId % 2 === 1 ? 1 : 0;
   const parityLabel = parity === 1 ? "홀수층" : "짝수층";
-  const parityFloors = floors.filter((floor) => Math.abs(floor % 2) === parity);
+  const parityFloors = withLobbyFloor(floors.filter((floor) => Math.abs(floor % 2) === parity), config);
   return {
     label: parityLabel,
     floors: parityFloors,
@@ -1330,6 +1330,10 @@ function normalizeFloors(floors, config) {
     .map((floor) => Math.floor(floor))
     .filter((floor) => floor >= config.minFloor && floor <= config.totalFloors)
     .sort((a, b) => a - b);
+}
+
+function withLobbyFloor(floors, config) {
+  return normalizeFloors([config.lobbyFloor, ...floors], config);
 }
 
 function floorIsAllowed(profile, floor) {
