@@ -64,8 +64,7 @@ function cacheElements() {
     "doorOpenInput",
     "transferMinInput",
     "transferMaxInput",
-    "doorCloseMinInput",
-    "doorCloseMaxInput",
+    "doorCloseInput",
     "reaccelMinInput",
     "reaccelMaxInput",
     "metricsGrid",
@@ -104,8 +103,7 @@ function bindEvents() {
     els.doorOpenInput,
     els.transferMinInput,
     els.transferMaxInput,
-    els.doorCloseMinInput,
-    els.doorCloseMaxInput,
+    els.doorCloseInput,
     els.reaccelMinInput,
     els.reaccelMaxInput,
   ].forEach((input) => input.addEventListener("change", runSimulation));
@@ -297,9 +295,15 @@ function getStopServiceConfig() {
     deceleration: readRange(els.decelMinInput, els.decelMaxInput, 1, 2),
     doorOpen: clamp(readNumber(els.doorOpenInput, 2), 0, 60),
     transfer: readRange(els.transferMinInput, els.transferMaxInput, 6, 10),
-    doorClose: readRange(els.doorCloseMinInput, els.doorCloseMaxInput, 2, 2),
+    doorClose: readFixedRange(els.doorCloseInput, 2),
     reacceleration: readRange(els.reaccelMinInput, els.reaccelMaxInput, 1, 2),
   };
+}
+
+function readFixedRange(input, fallback) {
+  const value = clamp(readNumber(input, fallback), 0, 60);
+  input.value = value;
+  return { min: value, max: value };
 }
 
 function readRange(minInput, maxInput, fallbackMin, fallbackMax) {
