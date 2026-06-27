@@ -53,7 +53,6 @@ function cacheElements() {
     "daySelect",
     "policyButtons",
     "seedInput",
-    "serviceSeedInput",
     "minStudentsInput",
     "maxStudentsInput",
     "elevatorCountInput",
@@ -94,7 +93,6 @@ function bindEvents() {
   els.daySelect.addEventListener("change", runSimulation);
   [
     els.seedInput,
-    els.serviceSeedInput,
     els.minStudentsInput,
     els.maxStudentsInput,
     els.elevatorCountInput,
@@ -273,6 +271,7 @@ function extractFloor(classroom) {
 function getConfig() {
   const minStudents = clamp(readNumber(els.minStudentsInput, 25), 1, 80);
   const maxStudents = Math.max(minStudents, clamp(readNumber(els.maxStudentsInput, 30), 1, 100));
+  const demandSeed = readNumber(els.seedInput, 2026);
 
   els.minStudentsInput.value = minStudents;
   els.maxStudentsInput.value = maxStudents;
@@ -280,8 +279,7 @@ function getConfig() {
   return {
     day: els.daySelect.value,
     policy: getPolicyName(),
-    demandSeed: readNumber(els.seedInput, 2026),
-    serviceSeed: readNumber(els.serviceSeedInput, 2027),
+    demandSeed,
     minStudents,
     maxStudents,
     elevatorCount: clamp(readNumber(els.elevatorCountInput, 3), 1, 8),
@@ -539,7 +537,7 @@ function simulate(calls, config) {
     passengerLoad: 0,
     totalDistance: 0,
   }));
-  const serviceRng = mulberry32(config.serviceSeed);
+  const serviceRng = mulberry32(serviceSeedFromConfig(config));
   const assignments = [];
   const studentElevators = new Map();
   const eventGroups = groupQueueEvents(calls);
@@ -863,7 +861,7 @@ function applyUniversalElevator(floorsByElevator, config) {
   const result = {};
   for (let elevatorId = 1; elevatorId <= config.elevatorCount; elevatorId += 1) {
     result[elevatorId] =
-      elevatorId === universal ? allFloors : [...(floorsByElevator[elevatorId] || [])];
+      elevatorId === universal ? allFloors : withLobbyFloor(floorsByElevator[elevatorId] || [], config);
   }
   return result;
 }
@@ -962,7 +960,7 @@ function optimalSignature(config) {
     config.minStudents,
     config.maxStudents,
     config.demandSeed,
-    config.serviceSeed,
+    serviceSeedFromConfig(config),
     round5(config.travelMinutesPerFloor),
     service.deceleration.min,
     service.deceleration.max,
@@ -1142,7 +1140,7 @@ function evaluatePeriod(periodCalls, config, floorsByElevator) {
   for (let id = 1; id <= config.elevatorCount; id += 1) {
     profiles[id] = floorsToProfile(floorsByElevator[id] || [], config);
   }
-  const serviceRng = mulberry32(config.serviceSeed);
+  const serviceRng = mulberry32(serviceSeedFromConfig(config));
   const studentElevators = new Map();
   const eventGroups = groupQueueEvents(periodCalls);
   let lastDropoff = Number.NEGATIVE_INFINITY;
@@ -1334,6 +1332,10 @@ function normalizeFloors(floors, config) {
 
 function withLobbyFloor(floors, config) {
   return normalizeFloors([config.lobbyFloor, ...floors], config);
+}
+
+function serviceSeedFromConfig(config) {
+  return (Number(config.demandSeed) || 2026) + 1;
 }
 
 function floorIsAllowed(profile, floor) {
