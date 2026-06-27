@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>엘리베이터 스케줄링 랩</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <h1>엘리베이터 스케줄링 랩</h1>
+        </div>
+        <div class="top-actions">
+          <label class="file-loader">
+            <input id="csvFile" type="file" accept=".csv,text/csv" />
+            CSV 불러오기
+          </label>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <aside class="controls-panel" aria-label="시뮬레이션 설정">
+          <section class="control-group">
+            <h2>환경 설정</h2>
+            <label> 
+              요일
+              <select id="daySelect">
+                <option value="월" selected>월</option>
+                <option value="화">화</option>
+                <option value="수">수</option>
+                <option value="목">목</option>
+                <option value="금">금</option>
+              </select>
+            </label>
+
+            <fieldset>
+              <legend>운행 정책</legend>
+              <div class="segmented" id="policyButtons">
+                <button type="button" data-policy="odd_even" class="active">홀짝</button>
+                <button type="button" data-policy="zone">구간</button>
+                <button type="button" data-policy="all">전체</button>
+                <button type="button" data-policy="priority">혼합</button>
+                <button type="button" data-policy="custom">커스텀</button>
+                <button type="button" data-policy="opt">opt</button>
+              </div>
+            </fieldset>
+          </section>
+
+          <section class="control-group">
+            <h2>난수</h2>
+            <label>
+              수요 시드
+              <input id="seedInput" type="number" value="2026" min="1" step="1" />
+            </label>
+            <div class="range-row">
+              <label>
+                최소 학생
+                <input id="minStudentsInput" type="number" value="25" min="1" max="60" />
+              </label>
+              <label>
+                최대 학생
+                <input id="maxStudentsInput" type="number" value="30" min="1" max="80" />
+              </label>
+            </div>
+          </section>
+
+          <section class="control-group">
+            <h2>엘리베이터</h2>
+            <label>
+              대수
+              <input id="elevatorCountInput" type="number" value="3" min="1" max="8" />
+            </label>
+            <label>
+              정원
+              <input id="capacityInput" type="number" value="20" min="1" max="30" />
+            </label>
+            <label>
+              총 층수
+              <input id="totalFloorsInput" type="number" value="14" min="2" max="30" />
+            </label>
+          </section>
+
+          <section class="control-group">
+            <h2>시간</h2>
+            <p class="model-note">1교시 09:00, 2교시 09:30 기준으로 30분 간격 큐를 생성합니다.</p>
+            <label>
+              층간 이동 초
+              <input id="travelSecondsInput" type="number" value="3" min="3" max="60" />
+            </label>
+          </section>
+
+          <section class="control-group">
+            <h2>정차 난수(초)</h2>
+            <p class="model-note">정차 1회당 시간을 구간별 난수로 샘플링합니다. 최소·최대를 같게 두면 고정값이 됩니다.</p>
+            <div class="range-row">
+              <label>
+                감속 최소
+                <input id="decelMinInput" type="number" value="1" min="0" max="60" step="0.5" />
+              </label>
+              <label>
+                감속 최대
+                <input id="decelMaxInput" type="number" value="2" min="0" max="60" step="0.5" />
+              </label>
+            </div>
+            <label>
+              문 열림
+              <input id="doorOpenInput" type="number" value="2" min="0" max="60" step="0.5" />
+            </label>
+            <div class="range-row">
+              <label>
+                승하차 최소
+                <input id="transferMinInput" type="number" value="6" min="0" max="120" step="0.5" />
+              </label>
+              <label>
+                승하차 최대
+                <input id="transferMaxInput" type="number" value="10" min="0" max="120" step="0.5" />
+              </label>
+            </div>
+            <label>
+              문 닫힘
+              <input id="doorCloseInput" type="number" value="2" min="0" max="60" step="0.5" />
+            </label>
+            <div class="range-row">
+              <label>
+                재가속 최소
+                <input id="reaccelMinInput" type="number" value="1" min="0" max="60" step="0.5" />
+              </label>
+              <label>
+                재가속 최대
+                <input id="reaccelMaxInput" type="number" value="2" min="0" max="60" step="0.5" />
+              </label>
+            </div>
+          </section>
+        </aside>
+
+        <section class="main-stage">
+          <div class="metrics-grid" id="metricsGrid"></div>
+
+          <section class="policy-panel">
+            <div class="panel-header compact">
+              <h2>엘리베이터별 담당층</h2>
+              <span id="policyName">-</span>
+            </div>
+            <div id="elevatorPolicyGrid" class="elevator-policy-grid"></div>
+            <div class="policy-editor-block">
+              <div class="panel-header compact">
+                <h2>운행 정책</h2>
+                <div class="custom-actions">
+                </div>
+              </div>
+              <p class="model-note">자동 최적화는 각 30분 시간대의 층별 수요를 분석해 엘리베이터에 담당층을 분산 배정합니다(부하 균형 → 소요시간 최소화).</p>
+              <div id="policyEditor" class="policy-editor"></div>
+            </div>
+          </section>
+
+          <section class="visual-panel">
+            <div class="panel-header">
+              <div>
+                <h2>실시간 배차</h2>
+                <p id="currentTimeLabel">-</p>
+              </div>
+              <div class="playback-controls">
+                <button id="playButton" type="button" aria-label="재생">▶</button>
+                <button id="pauseButton" type="button" aria-label="정지">Ⅱ</button>
+              </div>
+            </div>
+            <input id="timeSlider" class="time-slider" type="range" min="0" max="1" value="0" />
+            <div id="buildingGrid" class="building-grid" aria-label="층별 엘리베이터 위치"></div>
+          </section>
+
+          <section class="detail-grid">
+            <article class="detail-panel">
+              <div class="panel-header compact">
+                <h2>선택 정차</h2>
+                <span id="selectedBadge" class="status-badge">-</span>
+              </div>
+              <div id="selectedDetail" class="selected-detail"></div>
+            </article>
+
+            <article class="detail-panel">
+              <div class="panel-header compact">
+                <h2>강의 시간표</h2>
+                <input id="courseSearch" class="search-input" type="search" placeholder="학수번호, 강의실" />
+              </div>
+              <div class="table-wrap compact-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>학수번호</th>
+                      <th>강의실</th>
+                      <th>시간</th>
+                      <th>학생</th>
+                    </tr>
+                  </thead>
+                  <tbody id="lectureTableBody"></tbody>
+                </table>
+              </div>
+            </article>
+          </section>
+
+          <section class="carbon-panel" id="carbonPanel">
+            <!-- 탄소 절감 대시보드가 여기에 렌더링됩니다 -->
+          </section>
+
+          <section class="assignments-panel">
+            <div class="panel-header compact">
+              <h2>정차층 스케줄</h2>
+              <span id="assignmentCount">0건</span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>정차</th>
+                    <th>시간</th>
+                    <th>강의실</th>
+                    <th>인원</th>
+                    <th>배정</th>
+                    <th>대기</th>
+                  </tr>
+                </thead>
+                <tbody id="assignmentTableBody"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script src="lecture_data.js"></script>
+    <script src="optimal_custom.js"></script>
+    <script src="carbon.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
